@@ -1,0 +1,34 @@
+.category-page {
+  padding-top: 22px;
+}
+
+.category-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.category-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.muted-count {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+@media (max-width: 980px) {
+  .category-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .category-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+}

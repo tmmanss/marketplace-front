@@ -29,7 +29,7 @@ export const AuthProvider = ({ children }) => {
         if (parsedUser) {
           setUser(parsedUser);
           setAccessToken(token);
-          setRole(storedRole);
+          setRole(storedRole || parsedUser?.role || null);
         }
       } catch (e) {
         console.error("Failed to parse user from localStorage", e);
@@ -45,14 +45,19 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const data = await authService.login(email, password);
+      const resolvedRole = data.role || data.user?.role;
       setAccessToken(data.accessToken);
       setUser(data.user);
-      setRole(data.role);
+      setRole(resolvedRole);
 
       // Store in localStorage for persistence
       localStorage.setItem('accessToken', data.accessToken);
       localStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.setItem('role', data.role);
+      if (resolvedRole) {
+        localStorage.setItem('role', resolvedRole);
+      } else {
+        localStorage.removeItem('role');
+      }
 
       return { success: true };
     } catch (error) {
@@ -66,14 +71,19 @@ export const AuthProvider = ({ children }) => {
   const register = async (name, email, password, role) => {
     try {
       const data = await authService.register(name, email, password, role);
+      const resolvedRole = data.role || data.user?.role || role;
       setAccessToken(data.accessToken);
       setUser(data.user);
-      setRole(data.role);
+      setRole(resolvedRole);
 
       // Store in localStorage for persistence
       localStorage.setItem('accessToken', data.accessToken);
       localStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.setItem('role', data.role);
+      if (resolvedRole) {
+        localStorage.setItem('role', resolvedRole);
+      } else {
+        localStorage.removeItem('role');
+      }
 
       return { success: true };
     } catch (error) {
