@@ -1,34 +1,14 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
-
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
-};
-
-const Home = () => {
-  const { user, role, logout } = useAuth();
-
-  return (
-    <div style={{ maxWidth: '800px', margin: '50px auto', padding: '20px' }}>
-      <h1>Welcome to Marketplace</h1>
-      <div style={{ marginBottom: '20px' }}>
-        <p>Logged in as: {user?.name || user?.email}</p>
-        <p>Role: {role}</p>
-      </div>
-      <button onClick={logout} style={{ padding: '10px 20px' }}>
-        Logout
-      </button>
-    </div>
-  );
-};
+import Home from './pages/Home';
+import CategoryPage from './pages/CategoryPage';
+import CategoriesPage from './pages/CategoriesPage';
+import CartPage from './pages/CartPage';
+import CheckoutPage from './pages/CheckoutPage';
+import ProductPage from './pages/ProductPage';
+import SellerPage from './pages/SellerPage';
 
 function App() {
   return (
@@ -37,14 +17,13 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Home />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/" element={<Home />} />
+          <Route path="/categories" element={<CategoriesPage />} />
+          <Route path="/category/:id" element={<CategoryPage />} />
+          <Route path="/product/:id" element={<ProductPage />} />
+          <Route path="/seller" element={<SellerPage />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
         </Routes>
       </Router>
     </AuthProvider>
