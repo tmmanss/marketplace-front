@@ -71,21 +71,31 @@ export const AuthProvider = ({ children }) => {
   const register = async (name, email, password, role) => {
     try {
       const data = await authService.register(name, email, password, role);
-      const resolvedRole = data.role || data.user?.role || role;
-      setAccessToken(data.accessToken);
-      setUser(data.user);
-      setRole(resolvedRole);
+      if (data?.accessToken && data?.user) {
+        const resolvedRole = data.role || data.user?.role || role;
+        setAccessToken(data.accessToken);
+        setUser(data.user);
+        setRole(resolvedRole);
 
-      // Store in localStorage for persistence
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      if (resolvedRole) {
-        localStorage.setItem('role', resolvedRole);
-      } else {
-        localStorage.removeItem('role');
+        // Store in localStorage for persistence
+        localStorage.setItem('accessToken', data.accessToken);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        if (resolvedRole) {
+          localStorage.setItem('role', resolvedRole);
+        } else {
+          localStorage.removeItem('role');
+        }
+
+        return { success: true };
       }
 
-      return { success: true };
+      return {
+        success: true,
+        requiresVerification: true,
+        message:
+          data?.message ||
+          'Registration successful. Please check your email to verify your account.',
+      };
     } catch (error) {
       return {
         success: false,

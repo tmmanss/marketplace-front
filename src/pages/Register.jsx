@@ -50,7 +50,11 @@ const Register = () => {
     );
 
     if (result.success) {
-      navigate('/');
+      if (result.requiresVerification) {
+        navigate('/login', { state: { notice: result.message } });
+      } else {
+        navigate('/');
+      }
     } else {
       setError(result.error);
     }

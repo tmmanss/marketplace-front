@@ -5,18 +5,24 @@ import {
   getProductImages,
   getProductVariants,
   getProducts,
+  unwrapList,
 } from '../services/marketplace.service';
+import { applyAdminOverridesToProducts } from '../services/admin.service';
+import { addToCart } from '../services/cart.service';
+import { useAuth } from '../context/AuthContext';
 import '../styles/Home.css';
 import '../styles/CategoryPage.css';
 
 const CategoryPage = () => {
   const { id } = useParams();
+  const { user } = useAuth();
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [sort, setSort] = useState('featured');
   const [inStockOnly, setInStockOnly] = useState(false);
+  const [addedId, setAddedId] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -29,8 +35,8 @@ const CategoryPage = () => {
           getProducts(),
         ]);
 
-        const loadedCategories = Array.isArray(categoryRes.data) ? categoryRes.data : [];
-        const loadedProducts = Array.isArray(productRes.data) ? productRes.data : [];
+        const loadedCategories = unwrapList(categoryRes);
+        const loadedProducts = unwrapList(productRes);
         const categoryMap = new Map(
           loadedCategories.map((category) => [category._id, category.name])
         );
@@ -46,8 +52,8 @@ const CategoryPage = () => {
               getProductImages(productId).catch(() => ({ data: [] })),
             ]);
 
-            const variants = Array.isArray(variantRes.data) ? variantRes.data : [];
-            const images = Array.isArray(imageRes.data) ? imageRes.data : [];
+            const variants = unwrapList(variantRes);
+            const images = unwrapList(imageRes);
 
             const minPrice = hasDirectPrice
               ? product.price
@@ -63,7 +69,7 @@ const CategoryPage = () => {
               : product.isAvailable
                 ? 1
                 : 0;
-            const primaryImage = images[0]?.image_url || product.image_url || '';
+            const primaryImage = resolveImageUrl(images[0], product);
 
             const rawCategoryId = product.category_id || product.category?._id || product.category;
             const categoryName =
@@ -87,7 +93,7 @@ const CategoryPage = () => {
         );
 
         setCategories(loadedCategories);
-        setProducts(enrichedProducts);
+        setProducts(applyAdminOverridesToProducts(enrichedProducts));
       } catch (err) {
         setError(err?.response?.data?.message || 'Failed to load marketplace data');
       } finally {
@@ -128,6 +134,35 @@ const CategoryPage = () => {
   const formatPrice = (value) => {
     if (value === null || value === undefined) return 'No price';
     return `$${Number(value).toFixed(2)}`;
+  };
+
+  const handleAddToCart = (item) => {
+    addToCart(
+      {
+        id: item.id,
+        title: item.title,
+        price: item.minPrice,
+        imageUrl: item.imageUrl,
+        categoryName: item.categoryName,
+      },
+      user
+    );
+    setAddedId(item.id);
+    setTimeout(() => setAddedId(null), 900);
+  };
+
+  const resolveImageUrl = (image, product) => {
+    return (
+      image?.image_url ||
+      image?.imageUrl ||
+      image?.url ||
+      image?.link ||
+      image?.path ||
+      product?.image_url ||
+      product?.imageUrl ||
+      product?.image ||
+      ''
+    );
   };
 
   return (
@@ -193,11 +228,14 @@ const CategoryPage = () => {
                 <div className="product-footer">
                   <span className="price">{formatPrice(item.minPrice)}</span>
                   <button
-                    className="text-button"
+                    className={`text-button ${addedId === item.id ? 'added' : ''}`}
                     type="button"
-                    onClick={(event) => event.preventDefault()}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      handleAddToCart(item);
+                    }}
                   >
-                    Add
+                    {addedId === item.id ? 'Added' : 'Add'}
                   </button>
                 </div>
               </Link>

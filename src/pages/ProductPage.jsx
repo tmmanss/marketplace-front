@@ -7,7 +7,14 @@ import {
   getProductById,
   getProductImages,
   getProductVariants,
+  unwrapItem,
+  unwrapList,
 } from '../services/marketplace.service';
+import {
+  getCustomProductById,
+  getStatusOverride,
+  isProductHidden,
+} from '../services/admin.service';
 import { getRatings, getUserRating, setRating } from '../services/ratings.service';
 import '../styles/Home.css';
 import '../styles/ProductPage.css';
@@ -31,23 +38,58 @@ const ProductPage = () => {
         setLoading(true);
         setError('');
 
-        const [productRes, variantRes, imageRes, categoryRes] = await Promise.all([
+        if (isProductHidden(id)) {
+          setError('This product was removed by admin.');
+          setLoading(false);
+          return;
+        }
+
+        const custom = getCustomProductById(id);
+        const categoryRes = await getCategories().catch(() => ({ data: [] }));
+        const loadedCategories = unwrapList(categoryRes);
+
+        if (custom) {
+          const customProduct = {
+            _id: custom.id,
+            title: custom.title,
+            description: custom.description,
+            brand: custom.brand,
+            status: custom.status,
+            isAvailable: custom.isAvailable,
+            category_id: custom.categoryId,
+            price: custom.minPrice ?? null,
+            image_url: custom.imageUrl || '',
+          };
+          setProduct(customProduct);
+          setVariants([]);
+          setImages(
+            custom.imageUrl
+              ? [{ _id: `${custom.id}-image`, image_url: custom.imageUrl }]
+              : []
+          );
+          setCategories(loadedCategories);
+          setActiveImage(custom.imageUrl || '');
+          setRatings(getRatings(id));
+          setUserRating(getUserRating(id, user));
+          return;
+        }
+
+        const [productRes, variantRes, imageRes] = await Promise.all([
           getProductById(id),
           getProductVariants(id).catch(() => ({ data: [] })),
           getProductImages(id).catch(() => ({ data: [] })),
-          getCategories().catch(() => ({ data: [] })),
         ]);
 
-        const item = productRes.data;
-        const loadedVariants = Array.isArray(variantRes.data) ? variantRes.data : [];
-        const loadedImages = Array.isArray(imageRes.data) ? imageRes.data : [];
-        const loadedCategories = Array.isArray(categoryRes.data) ? categoryRes.data : [];
+        const item = unwrapItem(productRes);
+        const overrideStatus = getStatusOverride(item?._id || id);
+        const loadedVariants = unwrapList(variantRes);
+        const loadedImages = unwrapList(imageRes);
 
-        setProduct(item);
+        setProduct(overrideStatus ? { ...item, status: overrideStatus } : item);
         setVariants(loadedVariants);
         setImages(loadedImages);
         setCategories(loadedCategories);
-        setActiveImage(loadedImages[0]?.image_url || item.image_url || '');
+        setActiveImage(resolveImageUrl(loadedImages[0], item));
         setRatings(getRatings(id));
         setUserRating(getUserRating(id, user));
       } catch (err) {
@@ -90,6 +132,20 @@ const ProductPage = () => {
   const formatPrice = (value) => {
     if (value === null || value === undefined) return 'No price';
     return `$${Number(value).toFixed(2)}`;
+  };
+
+  const resolveImageUrl = (image, product) => {
+    return (
+      image?.image_url ||
+      image?.imageUrl ||
+      image?.url ||
+      image?.link ||
+      image?.path ||
+      product?.image_url ||
+      product?.imageUrl ||
+      product?.image ||
+      ''
+    );
   };
 
   const handleAdd = () => {
