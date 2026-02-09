@@ -13,3 +13,19 @@ export const getProductImages = (productId) =>
   api.get('/images', { params: { product_id: productId } });
 
 export const createProduct = (data) => api.post('/products', data);
+
+export const unwrapList = (response) => {
+  const data = response?.data;
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.value)) return data.value;
+  return [];
+};
+
+export const unwrapItem = (response) => {
+  const data = response?.data;
+  if (data?.value !== undefined) {
+    if (Array.isArray(data.value)) return data.value[0] || null;
+    return data.value;
+  }
+  return data || null;
+};

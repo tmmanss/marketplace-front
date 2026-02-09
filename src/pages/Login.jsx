@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import '../styles/Auth.css';
 
@@ -10,6 +10,8 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const notice = location.state?.notice || '';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -61,6 +63,7 @@ const Login = () => {
             />
           </div>
 
+          {notice && <div className="success-message">{notice}</div>}
           {error && <div className="error-message">⚠️ {error}</div>}
 
           <button

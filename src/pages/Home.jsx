@@ -6,8 +6,10 @@ import {
   getProductImages,
   getProductVariants,
   getProducts,
+  unwrapList,
 } from '../services/marketplace.service';
 import { addToCart, getCartCount } from '../services/cart.service';
+import { applyAdminOverridesToProducts } from '../services/admin.service';
 import '../styles/Home.css';
 
 const Home = () => {
@@ -20,11 +22,13 @@ const Home = () => {
   const [sort, setSort] = useState('featured');
   const [inStockOnly, setInStockOnly] = useState(false);
   const [cartCount, setCartCount] = useState(0);
+  const [addedId, setAddedId] = useState(null);
 
   const productSectionRef = useRef(null);
   const isLoggedIn = isAuthenticated || !!user;
   const effectiveRole = role || user?.role;
   const isSeller = String(effectiveRole || '').toLowerCase() === 'seller';
+  const isAdmin = String(effectiveRole || '').toLowerCase().includes('admin') || user?.isAdmin;
 
   useEffect(() => {
     const load = async () => {
@@ -37,8 +41,8 @@ const Home = () => {
           getProducts(),
         ]);
 
-        const loadedCategories = Array.isArray(categoryRes.data) ? categoryRes.data : [];
-        const loadedProducts = Array.isArray(productRes.data) ? productRes.data : [];
+        const loadedCategories = unwrapList(categoryRes);
+        const loadedProducts = unwrapList(productRes);
         const categoryMap = new Map(
           loadedCategories.map((category) => [category._id, category.name])
         );
@@ -54,8 +58,8 @@ const Home = () => {
               getProductImages(productId).catch(() => ({ data: [] })),
             ]);
 
-            const variants = Array.isArray(variantRes.data) ? variantRes.data : [];
-            const images = Array.isArray(imageRes.data) ? imageRes.data : [];
+            const variants = unwrapList(variantRes);
+            const images = unwrapList(imageRes);
 
             const minPrice = hasDirectPrice
               ? product.price
@@ -67,7 +71,7 @@ const Home = () => {
               : product.isAvailable
                 ? 1
                 : 0;
-            const primaryImage = images[0]?.image_url || product.image_url || '';
+            const primaryImage = resolveImageUrl(images[0], product);
 
             const rawCategoryId = product.category_id || product.category?._id || product.category;
             const categoryName =
@@ -90,7 +94,7 @@ const Home = () => {
         );
 
         setCategories(loadedCategories);
-        setProducts(enrichedProducts);
+        setProducts(applyAdminOverridesToProducts(enrichedProducts));
       } catch (err) {
         setError(err?.response?.data?.message || 'Failed to load marketplace data');
       } finally {
@@ -155,11 +159,35 @@ const Home = () => {
       user
     );
     setCartCount(getCartCount(user));
+    setAddedId(item.id);
+    setTimeout(() => setAddedId(null), 900);
   };
 
   const formatPrice = (value) => {
     if (value === null || value === undefined) return 'No price';
     return `$${Number(value).toFixed(2)}`;
+  };
+
+  const resolveImageUrl = (image, product) => {
+    return (
+      image?.image_url ||
+      image?.imageUrl ||
+      image?.url ||
+      image?.link ||
+      image?.path ||
+      product?.image_url ||
+      product?.imageUrl ||
+      product?.image ||
+      ''
+    );
+  };
+
+  const heroDeal = {
+    id: 'hero-deal-smart-home',
+    title: 'Smart Home Starter Pack',
+    minPrice: 249,
+    imageUrl: '',
+    categoryName: 'Smart Home',
   };
 
   return (
@@ -201,14 +229,24 @@ const Home = () => {
               Seller Studio
             </Link>
           )}
+          {isAdmin && (
+            <Link className="ghost-button" to="/admin">
+              Admin
+            </Link>
+          )}
           <Link className="cart-pill" to="/cart">
             Cart
-            <span className="cart-count">{cartCount}</span>
+            <span className={`cart-count ${addedId ? 'bump' : ''}`}>{cartCount}</span>
           </Link>
           {isLoggedIn ? (
-            <button className="ghost-button" onClick={logout} type="button">
-              Logout
-            </button>
+            <>
+              <Link className="ghost-button" to="/profile">
+                Profile
+              </Link>
+              <button className="ghost-button" onClick={logout} type="button">
+                Logout
+              </button>
+            </>
           ) : (
             <>
               <Link className="ghost-button" to="/login">
@@ -270,7 +308,11 @@ const Home = () => {
             <span className="price">$249</span>
             <span className="strike">$329</span>
           </div>
-          <button className="ghost-button" type="button">
+          <button
+            className="ghost-button"
+            type="button"
+            onClick={() => handleAddToCart(heroDeal)}
+          >
             Add to cart
           </button>
           <div className="promo-grid">
@@ -336,14 +378,14 @@ const Home = () => {
                 <div className="product-footer">
                   <span className="price">{formatPrice(item.minPrice)}</span>
                   <button
-                    className="text-button"
+                    className={`text-button ${addedId === item.id ? 'added' : ''}`}
                     type="button"
                     onClick={(event) => {
                       event.preventDefault();
                       handleAddToCart(item);
                     }}
                   >
-                    Add
+                    {addedId === item.id ? 'Added' : 'Add'}
                   </button>
                 </div>
               </Link>
@@ -372,15 +414,18 @@ const Home = () => {
           <p>Support 24/7 - Secure payments - Trusted sellers</p>
         </div>
         <div className="footer-links">
-          <button className="text-button" type="button">
-            About
-          </button>
-          <button className="text-button" type="button">
-            Help
-          </button>
-          <button className="text-button" type="button">
-            Careers
-          </button>
+          <Link className="footer-link" to="/about">
+            <span>About</span>
+            <p>Marketplace for verified sellers and fast student-friendly delivery.</p>
+          </Link>
+          <Link className="footer-link" to="/help">
+            <span>Help</span>
+            <p>Order tracking, returns, and live chat support with real agents.</p>
+          </Link>
+          <Link className="footer-link" to="/careers">
+            <span>Careers</span>
+            <p>We are hiring: design, growth, logistics, and seller success.</p>
+          </Link>
         </div>
       </footer>
     </div>

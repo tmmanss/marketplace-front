@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getCategories } from '../services/marketplace.service';
+import { getCategories, unwrapList } from '../services/marketplace.service';
 import '../styles/Home.css';
 import '../styles/CategoriesPage.css';
 
@@ -16,7 +16,7 @@ const CategoriesPage = () => {
         setLoading(true);
         setError('');
         const response = await getCategories();
-        setCategories(Array.isArray(response.data) ? response.data : []);
+        setCategories(unwrapList(response));
       } catch (err) {
         setError(err?.response?.data?.message || 'Failed to load categories');
       } finally {

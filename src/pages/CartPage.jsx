@@ -8,6 +8,7 @@ import '../styles/CartPage.css';
 const CartPage = () => {
   const { user } = useAuth();
   const [items, setItems] = useState([]);
+  const [removingKey, setRemovingKey] = useState('');
 
   useEffect(() => {
     setItems(getCartItems(user));
@@ -18,8 +19,13 @@ const CartPage = () => {
   }, [items]);
 
   const handleRemove = (item) => {
-    const updated = removeFromCart(item.id, item.addedAt, user);
-    setItems(updated);
+    const key = `${item.id}-${item.addedAt}`;
+    setRemovingKey(key);
+    setTimeout(() => {
+      const updated = removeFromCart(item.id, item.addedAt, user);
+      setItems(updated);
+      setRemovingKey('');
+    }, 260);
   };
 
   const handleClear = () => {
@@ -50,8 +56,13 @@ const CartPage = () => {
         ) : (
           <div className="cart-grid">
             <div className="cart-list">
-              {items.map((item) => (
-                <div key={`${item.id}-${item.addedAt}`} className="cart-item">
+              {items.map((item) => {
+                const key = `${item.id}-${item.addedAt}`;
+                return (
+                <div
+                  key={key}
+                  className={`cart-item ${removingKey === key ? 'removing' : ''}`}
+                >
                   <div className="cart-thumb">
                     {item.imageUrl ? <img src={item.imageUrl} alt={item.title} /> : null}
                   </div>
@@ -64,7 +75,8 @@ const CartPage = () => {
                     Remove
                   </button>
                 </div>
-              ))}
+                );
+              })}
             </div>
             <div className="cart-summary">
               <h3>Summary</h3>
